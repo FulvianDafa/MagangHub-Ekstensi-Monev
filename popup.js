@@ -8,7 +8,9 @@ const draftForm = byId("draft-form");
 const settingsForm = byId("settings-form");
 const summaryInput = byId("summary");
 const apiKey = byId("api-key");
+const toggleKey = byId("toggle-key");
 const removeKey = byId("remove-key");
+const resetDialog = byId("reset-dialog");
 const noObstacle = byId("no-obstacle");
 const autoFill = byId("auto-fill");
 const replaceOption = byId("replace-option");
@@ -29,7 +31,20 @@ function showStatus(message = "", tone = "") {
   statusLabel.hidden = !message;
 }
 
+function setKeyVisible(visible) {
+  apiKey.type = visible ? "text" : "password";
+  toggleKey.textContent = visible ? "Sembunyikan" : "Tampilkan";
+}
+
 function setMode(mode) {
+  if (mode === "settings" && settingsForm.hidden) {
+    apiKey.value = MonevGemini.getKey();
+  }
+  if (mode !== "settings") {
+    setKeyVisible(false);
+    apiKey.value = "";
+  }
+
   for (const { name, button, pane } of modes) {
     const selected = mode === name;
     pane.hidden = !selected;
@@ -86,7 +101,7 @@ async function openDate(date) {
 
 async function writeDraft(draft, notes) {
   const key = storageKey(savedDate);
-  const hasText = fields.some(({ id }) => draft[id].trim());
+  const hasText = fields.some(({ id }) => draft[id]?.trim());
   if (hasText) {
     await chrome.storage.local.set({
       [key]: { ...draft, notes, autoFill: autoFill.checked, updatedAt: crypto.randomUUID() },
@@ -237,18 +252,41 @@ settingsForm.addEventListener("submit", (event) => {
     return;
   }
   MonevGemini.setKey(key);
-  apiKey.value = "";
   updateControls();
   setMode("notes");
   showStatus("API key tersimpan. Kamu bisa membuat draf dari ringkasanmu.", "success");
 });
 
+toggleKey.addEventListener("click", () => setKeyVisible(apiKey.type === "password"));
+
 removeKey.addEventListener("click", () => {
   if (busy) return;
   MonevGemini.setKey("");
   apiKey.value = "";
+  setKeyVisible(false);
   updateControls();
   showStatus("API key dihapus.", "success");
+});
+
+for (const button of document.querySelectorAll("[data-reset-draft]")) {
+  button.addEventListener("click", () => {
+    if (busy) return;
+    resetDialog.returnValue = "";
+    resetDialog.showModal();
+  });
+}
+
+resetDialog.addEventListener("close", () => {
+  if (resetDialog.returnValue !== "reset") return;
+  return withControlsLocked(async () => {
+    await writeDraft({}, {});
+    summaryInput.value = "";
+    noObstacle.checked = false;
+    writeFields({});
+    resetReplace();
+    setMode("notes");
+    showStatus("Ringkasan dan draf tanggal ini sudah direset.", "success");
+  });
 });
 
 byId("save").addEventListener("click", () => withControlsLocked(async () => {

@@ -36,14 +36,20 @@
         <label class="check-row">
           <input type="checkbox" id="no-obstacle"> Tidak ada kendala
         </label>
-        <button type="submit" class="full">Buat draf dengan Gemini</button>
+        <div class="actions report-actions">
+          <button type="button" class="danger" data-reset-draft>Reset draf</button>
+          <button type="submit">Buat draf dengan Gemini</button>
+        </div>
         <p class="hint">Ringkasan dikirim ke Gemini saat kamu membuat draf.</p>
       </form>
 
       <form id="settings-form" hidden>
         <div class="field">
           <label for="api-key">API key Gemini</label>
-          <input type="password" id="api-key" autocomplete="off" spellcheck="false" required>
+          <div class="key-row">
+            <input type="password" id="api-key" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="key-status" required>
+            <button type="button" id="toggle-key" aria-controls="api-key">Tampilkan</button>
+          </div>
           <p class="hint" id="key-status"></p>
           <p class="hint"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Buat API key di Google AI Studio</a></p>
         </div>
@@ -75,12 +81,23 @@
         <label class="check-row" id="replace-option" hidden>
           <input type="checkbox" id="replace-existing"> Izinkan ganti teks yang sudah ada di Monev
         </label>
-        <div class="actions">
+        <div class="actions report-actions">
+          <button type="button" class="danger" data-reset-draft>Reset draf</button>
           <button type="button" id="save">Simpan draf</button>
           <button type="submit">Isi sekarang</button>
         </div>
       </form>
       <p class="hint">Tinjau dan kirim laporan di halaman Monev.</p>
+      <dialog id="reset-dialog" aria-labelledby="reset-title" aria-describedby="reset-description">
+        <form method="dialog">
+          <h2 id="reset-title">Reset draf tanggal ini?</h2>
+          <p id="reset-description">Ringkasan dan tiga kolom draf untuk tanggal yang dipilih akan dikosongkan.</p>
+          <div class="actions">
+            <button type="submit" value="cancel" autofocus>Batal</button>
+            <button type="submit" value="reset" class="danger">Reset draf</button>
+          </div>
+        </form>
+      </dialog>
     </div>
   </main>
 </body>
