@@ -256,7 +256,7 @@ noteForm.addEventListener("submit", (event) => {
     showStatus("Gemini sedang menyusun draf…");
     let draft;
     try {
-      draft = await MonevGemini.generate(notes.summary, notes.noObstacle);
+      draft = await MonevGemini.generate(notes.summary, notes.noObstacle, savedDate);
     } catch (error) {
       showStatus(error.message, "error");
       return;

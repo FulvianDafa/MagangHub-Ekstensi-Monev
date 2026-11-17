@@ -9,6 +9,14 @@ vm.runInThisContext(source + "\nglobalThis.__MonevReport = MonevReport;", { file
 const MonevReport = globalThis.__MonevReport;
 delete globalThis.__MonevReport;
 
+// gemini.js reads MonevReport at load time, so it gets the same global the extension provides.
+const geminiSource = readFileSync(new URL("../src/lib/gemini.js", import.meta.url), "utf8");
+globalThis.MonevReport = MonevReport;
+vm.runInThisContext(geminiSource + "\nglobalThis.__MonevGemini = MonevGemini;", { filename: "gemini.js" });
+const MonevGemini = globalThis.__MonevGemini;
+delete globalThis.__MonevGemini;
+delete globalThis.MonevReport;
+
 const url = (path) => "https://monev.maganghub.kemnaker.go.id" + path;
 
 test("validDate rejects malformed and impossible dates", () => {
@@ -86,4 +94,22 @@ test("the manifest content script runs on the same origin the code validates", (
       pattern + " does not start with " + MonevReport.SITE_ORIGIN + "/",
     );
   }
+});
+
+test("every no-obstacle sentence clears the column minimum", () => {
+  // A shorter sentence would be rejected by shortField and silently block auto-fill.
+  const drafts = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21"];
+  const texts = new Set(drafts.map((date) => MonevGemini.noObstacleTextFor(date)));
+  for (const text of texts) {
+    assert.ok(
+      text.trim().length >= MonevReport.MIN_LENGTH,
+      text.length + " chars is below the " + MonevReport.MIN_LENGTH + " minimum: " + text,
+    );
+  }
+  assert.equal(texts.size, 4, "the date seed should reach all four sentences across six days");
+});
+
+test("noObstacleTextFor is stable for a date and safe without one", () => {
+  assert.equal(MonevGemini.noObstacleTextFor("2026-11-17"), MonevGemini.noObstacleTextFor("2026-11-17"));
+  assert.ok(MonevGemini.noObstacleTextFor(undefined).length >= MonevReport.MIN_LENGTH);
 });
