@@ -1,4 +1,7 @@
 const MonevReport = (() => {
+  const SITE_ORIGIN = "https://monev.maganghub.kemnaker.go.id";
+  // Popup link target; also locked against popup.html by the unit test.
+  const DASHBOARD_URL = SITE_ORIGIN + "/dashboard";
   // Monev rejects a report column shorter than this.
   const MIN_LENGTH = 100;
   // The site may re-render and drop a written value, so verify instead of trusting one fixed delay.
@@ -27,7 +30,7 @@ const MonevReport = (() => {
     }
     const date = url.searchParams.get("date");
     if (
-      url.origin !== "https://monev.maganghub.kemnaker.go.id" ||
+      url.origin !== SITE_ORIGIN ||
       url.pathname.replace(/\/$/, "") !== "/dashboard/riwayat" ||
       url.searchParams.get("view") !== "edit" ||
       !validDate(date)
@@ -128,5 +131,5 @@ const MonevReport = (() => {
     return { status: "incomplete", labels: pending.map(({ label }) => label) };
   }
 
-  return { MIN_LENGTH, fields, validDate, dateFromUrl, storageKey, isDraftKey, shortField, locateFields, fill };
+  return { SITE_ORIGIN, DASHBOARD_URL, MIN_LENGTH, fields, validDate, dateFromUrl, storageKey, isDraftKey, shortField, locateFields, fill };
 })();
