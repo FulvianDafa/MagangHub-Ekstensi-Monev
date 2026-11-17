@@ -1,5 +1,5 @@
 const MonevGemini = (() => {
-  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
+  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent";
   const keyName = "monev-gemini-key";
   const fields = MonevReport.fields.map(({ id }) => id);
   const noObstacleText = "Selama kegiatan magang hari ini, saya tidak mengalami kendala yang perlu dilaporkan terkait aktivitas yang saya jalani.";
@@ -42,7 +42,7 @@ const MonevGemini = (() => {
           systemInstruction: { parts: [{ text: [
             "Susun tiga bidang draf laporan harian magang dalam bahasa Indonesia, dengan sudut pandang saya.",
             "activity adalah uraian kegiatan, learning adalah pembelajaran, dan obstacle adalah kendala.",
-            "Untuk setiap bidang yang didukung catatan, tulis satu paragraf natural sekitar 115 sampai 280 karakter.",
+            "Untuk setiap bidang yang didukung catatan, tulis satu paragraf natural dan kasual namun tetap profesional sekitar 115 sampai 280 karakter.",
             "Pertahankan fakta dari catatan. Jangan mengarang kegiatan, pembelajaran, kendala, penyebab, hasil, atau tindakan lanjutan.",
             "Jika catatan kurang mendukung salah satu bidang, kembalikan teks kosong untuk bidang itu agar peserta dapat melengkapinya.",
             "Jika noObstacle bernilai true, biarkan obstacle kosong. Status tersebut akan ditangani oleh aplikasi.",
