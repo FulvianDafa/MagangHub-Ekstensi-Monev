@@ -1,18 +1,25 @@
 (() => {
-  const { dateFromUrl, storageKey, shortField, locateFields, fill } = MonevReport;
+  const { dateFromUrl, storageKey, isDraftKey, shortField, locateFields, fill } = MonevReport;
+  // Late renders arrive as DOM mutations, so the observer only restarts this timer.
+  const SETTLE_DEBOUNCE_MS = 120;
+  const REPORT_PATH = "/dashboard/riwayat";
+
   let cachedDate;
   let cachedDraft;
   let storageRevision = 0;
   let automaticAttempt;
+  let filledFor;
   let observedDate;
   let timer;
 
   async function runAutomatic() {
     const date = dateFromUrl(location.href);
-    if (!date) {
+    if (date !== observedDate) {
+      observedDate = date;
       automaticAttempt = null;
-      return;
+      filledFor = undefined;
     }
+    if (!date) return;
 
     if (cachedDate !== date) {
       const revision = storageRevision;
@@ -24,33 +31,37 @@
     }
     if (!cachedDraft?.autoFill || shortField(cachedDraft)) return;
 
+    const revision = cachedDraft.updatedAt;
+    // This exact draft already sits in the form, so the DOM scan is skipped entirely.
+    if (filledFor?.date === date && filledFor.revision === revision) return;
+
     const matches = locateFields();
     if (matches.some(({ input }) => !input)) return;
 
     // One attempt per rendered form and saved draft. Editing a field after that stays manual.
     const inputs = matches.map(({ input }) => input);
-    const revision = cachedDraft.updatedAt;
     if (
       automaticAttempt?.date === date && automaticAttempt.revision === revision &&
       automaticAttempt.inputs.every((input, index) => input === inputs[index])
     ) return;
 
     automaticAttempt = { date, revision, inputs };
-    await fill(date, cachedDraft, false, matches);
+    const result = await fill(date, cachedDraft, false, matches);
+    if (result.status === "filled") filledFor = { date, revision };
+  }
+
+  function reportError(error) {
+    console.debug("[Draf Monev] pengisian otomatis dilewati:", error);
   }
 
   function scheduleAutomatic() {
-    const date = dateFromUrl(location.href);
-    if (date !== observedDate) {
-      observedDate = date;
-      automaticAttempt = null;
-    }
     if (timer !== undefined) clearTimeout(timer);
-    if (!date) return;
+    // A string check, not URL parsing: this runs on every mutation batch.
+    if (!location.pathname.includes(REPORT_PATH)) return;
     timer = setTimeout(() => {
       timer = undefined;
-      runAutomatic().catch(() => {});
-    }, 120);
+      runAutomatic().catch(reportError);
+    }, SETTLE_DEBOUNCE_MS);
   }
 
   // Riwayat can display a report after an in-site navigation or an asynchronous render.
@@ -58,15 +69,15 @@
     childList: true,
     subtree: true,
     attributes: true,
-    characterData: true,
     attributeFilter: ["hidden", "aria-hidden", "inert", "disabled", "readonly"],
   });
   addEventListener("popstate", scheduleAutomatic);
   addEventListener("pageshow", scheduleAutomatic);
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== "local" || !Object.keys(changes).some((key) => key.startsWith("draft:"))) return;
+    if (area !== "local" || !Object.keys(changes).some(isDraftKey)) return;
     storageRevision++;
     cachedDate = undefined;
+    filledFor = undefined;
     scheduleAutomatic();
   });
 
