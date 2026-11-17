@@ -28,7 +28,27 @@ h1 {
   margin: 0;
   font-size: 17px;
   line-height: 1.2;
+  min-width: 0;
 }
+
+.site-link {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  flex: none;
+  min-height: 32px;
+  padding: 5px 9px;
+  border: 1px solid #8eafa2;
+  border-radius: 8px;
+  background: white;
+  color: #164e3e;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.site-link:hover { box-shadow: inset 0 0 0 2px #358e7440; }
 
 main { padding: 13px 18px 15px; }
 
@@ -166,7 +186,7 @@ input[type="date"] {
   font-size: 12px;
 }
 
-.modes button[aria-pressed="true"] {
+.modes button[aria-selected="true"] {
   border-color: #c6d9d0;
   background: white;
 }
@@ -183,12 +203,17 @@ textarea:disabled { background: #e9eeeb; }
 
 .check-row input { accent-color: #18634d; }
 
+button.full { width: 100%; }
+
+#clear-drafts { margin-top: 9px; }
+
 .key-row {
   display: flex;
   align-items: stretch;
   gap: 8px;
 }
 
+/* Targets the id, not the type: the field switches between password and text. */
 #api-key {
   width: 100%;
   min-width: 0;

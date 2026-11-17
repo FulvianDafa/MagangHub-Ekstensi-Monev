@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Draf Monev MagangHub</title>
   <link rel="stylesheet" href="popup.css">
-  <script src="fill-report.js" defer></script>
-  <script src="gemini.js" defer></script>
+  <script src="../lib/monev-report.js" defer></script>
+  <script src="../lib/gemini.js" defer></script>
   <script src="popup.js" defer></script>
 </head>
 <body>
   <header>
-    <img src="icons/icon-48.png" width="36" height="36" alt="">
+    <img src="../../icons/icon-48.png" width="36" height="36" alt="">
     <h1>Draf Monev MagangHub</h1>
+    <a id="open-dashboard" class="site-link" href="https://monev.maganghub.kemnaker.go.id/dashboard" target="_blank" rel="noopener noreferrer" aria-label="Buka dashboard Monev di tab baru">Dashboard</a>
   </header>
   <main>
     <p id="status" role="status" aria-atomic="true">Memuat draf…</p>
@@ -21,13 +22,13 @@
         <label for="report-date">Tanggal laporan</label>
         <input id="report-date" type="date" required>
       </div>
-      <nav class="modes" aria-label="Tampilan laporan">
-        <button type="button" id="show-notes" aria-pressed="true" aria-controls="note-form">Tulis laporan</button>
-        <button type="button" id="show-draft" aria-pressed="false" aria-controls="draft-form">Draf laporan</button>
-        <button type="button" id="show-settings" aria-pressed="false" aria-controls="settings-form">Pengaturan</button>
+      <nav class="modes" id="report-modes" role="tablist" aria-label="Tampilan laporan">
+        <button type="button" role="tab" id="show-notes" aria-selected="true" aria-controls="note-form" tabindex="0">Tulis laporan</button>
+        <button type="button" role="tab" id="show-draft" aria-selected="false" aria-controls="draft-form" tabindex="-1">Draf laporan</button>
+        <button type="button" role="tab" id="show-settings" aria-selected="false" aria-controls="settings-form" tabindex="-1">Pengaturan</button>
       </nav>
 
-      <form id="note-form">
+      <form id="note-form" role="tabpanel" aria-labelledby="show-notes">
         <div class="field">
           <label for="summary">Ringkas kegiatan hari ini</label>
           <textarea id="summary" rows="4" maxlength="3000" required aria-describedby="summary-hint" placeholder="Saya ikut onboarding QA, belajar alur pelaporan bug, dan sempat menunggu akses Jira."></textarea>
@@ -43,7 +44,7 @@
         <p class="hint">Ringkasan dikirim ke Gemini saat kamu membuat draf.</p>
       </form>
 
-      <form id="settings-form" hidden>
+      <form id="settings-form" role="tabpanel" aria-labelledby="show-settings" hidden>
         <div class="field">
           <label for="api-key">API key Gemini</label>
           <div class="key-row">
@@ -57,23 +58,24 @@
           <button type="button" id="remove-key">Hapus API key</button>
           <button type="submit">Simpan API key</button>
         </div>
+        <button type="button" id="clear-drafts" class="full">Hapus semua draf</button>
       </form>
 
-      <form id="draft-form" hidden>
+      <form id="draft-form" role="tabpanel" aria-labelledby="show-draft" hidden>
         <div class="field">
           <label for="activity">Uraian aktivitas</label>
           <textarea id="activity" rows="3" aria-describedby="activity-count"></textarea>
-          <p class="count" id="activity-count"></p>
+          <p class="count" id="activity-count" aria-live="polite"></p>
         </div>
         <div class="field">
           <label for="learning">Pembelajaran yang diperoleh</label>
           <textarea id="learning" rows="3" aria-describedby="learning-count"></textarea>
-          <p class="count" id="learning-count"></p>
+          <p class="count" id="learning-count" aria-live="polite"></p>
         </div>
         <div class="field">
           <label for="obstacle">Kendala yang dialami</label>
           <textarea id="obstacle" rows="3" aria-describedby="obstacle-count"></textarea>
-          <p class="count" id="obstacle-count"></p>
+          <p class="count" id="obstacle-count" aria-live="polite"></p>
         </div>
         <label class="check-row">
           <input type="checkbox" id="auto-fill"> Isi otomatis saat formulir dibuka

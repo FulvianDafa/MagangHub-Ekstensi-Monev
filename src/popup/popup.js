@@ -1,5 +1,11 @@
-const { MIN_LENGTH, fields, validDate, dateFromUrl, storageKey, shortField } = MonevReport;
+const { MIN_LENGTH, fields, validDate, dateFromUrl, storageKey, isDraftKey, shortField } = MonevReport;
 const byId = (id) => document.getElementById(id);
+const hasContent = (draft) => fields.some(({ id }) => Boolean(draft[id]?.trim()));
+// Formatter construction is the expensive part, so both are built once.
+const DATE_LONG = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "UTC" });
+const DATE_JAKARTA = new Intl.DateTimeFormat("id-ID", {
+  timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit",
+});
 const workspace = byId("workspace");
 const dateInput = byId("report-date");
 const statusLabel = byId("status");
@@ -20,12 +26,17 @@ const modes = [
   { name: "draft", button: byId("show-draft"), pane: draftForm },
   { name: "settings", button: byId("show-settings"), pane: settingsForm },
 ];
+const modeList = byId("report-modes");
+const clearDrafts = byId("clear-drafts");
 
 let busy = false;
 let savedDate;
 let lastSavedNotes = {};
+let clearArmed = false;
+let clearTimer;
 
 function showStatus(message = "", tone = "") {
+  if (statusLabel.textContent === message && statusLabel.dataset.tone === tone) return;
   statusLabel.textContent = message;
   statusLabel.dataset.tone = tone;
   statusLabel.hidden = !message;
@@ -48,23 +59,28 @@ function setMode(mode) {
   for (const { name, button, pane } of modes) {
     const selected = mode === name;
     pane.hidden = !selected;
-    button.setAttribute("aria-pressed", String(selected));
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
   }
 }
 
+function updateCount(id) {
+  const length = byId(id).value.trim().length;
+  const count = byId(id + "-count");
+  count.textContent = length + " / " + MIN_LENGTH + " karakter minimum";
+  count.dataset.valid = String(length >= MIN_LENGTH);
+}
+
 function updateControls() {
-  for (const { id } of fields) {
-    const length = byId(id).value.trim().length;
-    const count = byId(id + "-count");
-    count.textContent = length + " / " + MIN_LENGTH + " karakter minimum";
-    count.dataset.valid = String(length >= MIN_LENGTH);
-  }
+  for (const { id } of fields) updateCount(id);
   for (const control of workspace.querySelectorAll("button, textarea, input")) {
     control.disabled = busy;
   }
   const hasKey = Boolean(MonevGemini.getKey());
   removeKey.disabled = busy || !hasKey;
-  byId("key-status").textContent = hasKey ? "API key sudah tersimpan di browser ini." : "Belum ada API key.";
+  const keyStatus = byId("key-status");
+  const label = hasKey ? "API key sudah tersimpan di browser ini." : "Belum ada API key.";
+  if (keyStatus.textContent !== label) keyStatus.textContent = label;
 }
 
 function resetReplace() {
@@ -101,8 +117,9 @@ async function openDate(date) {
 
 async function writeDraft(draft, notes) {
   const key = storageKey(savedDate);
-  const hasText = fields.some(({ id }) => draft[id]?.trim());
+  const hasText = hasContent(draft);
   if (hasText) {
+    // updatedAt holds a UUID, not a time: auto-fill only compares it to detect a changed draft.
     await chrome.storage.local.set({
       [key]: { ...draft, notes, autoFill: autoFill.checked, updatedAt: crypto.randomUUID() },
     });
@@ -115,13 +132,17 @@ async function writeDraft(draft, notes) {
 }
 
 function reportReadyMessage() {
-  const localized = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "UTC" })
-    .format(new Date(savedDate));
+  const localized = DATE_LONG.format(new Date(savedDate));
   return "Draf siap. Buka formulir Monev untuk " + localized + " agar kolom terisi otomatis.";
 }
 
-async function fillOpenReport(draft, allowReplace) {
+async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab;
+}
+
+async function fillOpenReport(draft, allowReplace) {
+  const tab = await getActiveTab();
   if (dateFromUrl(tab?.url) !== savedDate || !Number.isInteger(tab?.id)) {
     showStatus(autoFill.checked ? reportReadyMessage() : "Draf tersimpan. Buka formulir Monev untuk tanggal ini.", "success");
     return;
@@ -173,11 +194,9 @@ async function withControlsLocked(action) {
 }
 
 function todayInJakarta() {
-  const parts = new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
-  return [values.year, values.month, values.day].join("-");
+  const values = {};
+  for (const { type, value } of DATE_JAKARTA.formatToParts(new Date())) values[type] = value;
+  return values.year + "-" + values.month + "-" + values.day;
 }
 
 dateInput.addEventListener("change", () => withControlsLocked(async () => {
@@ -190,6 +209,21 @@ for (const { name, button } of modes) {
     setMode(name);
   });
 }
+modeList.addEventListener("keydown", (event) => {
+  const index = modes.findIndex(({ button }) => button === event.target);
+  if (index === -1) return;
+  const step =
+    event.key === "ArrowRight" ? 1 :
+    event.key === "ArrowLeft" ? -1 :
+    event.key === "Home" ? -index :
+    event.key === "End" ? modes.length - 1 - index : 0;
+  if (step === 0) return;
+  event.preventDefault();
+  showStatus();
+  const next = modes[(index + step + modes.length) % modes.length];
+  setMode(next.name);
+  next.button.focus();
+});
 noteForm.addEventListener("input", () => {
   showStatus();
 });
@@ -198,7 +232,8 @@ draftForm.addEventListener("input", (event) => {
     showStatus();
     resetReplace();
   }
-  updateControls();
+  const edited = fields.find(({ id }) => id === event.target.id);
+  if (edited) updateCount(edited.id);
 });
 
 noteForm.addEventListener("submit", (event) => {
@@ -221,12 +256,12 @@ noteForm.addEventListener("submit", (event) => {
     showStatus("Gemini sedang menyusun draf…");
     let draft;
     try {
-      draft = await MonevGemini.generate(notes.summary, notes.noObstacle);
+      draft = await MonevGemini.generate(notes.summary, notes.noObstacle, savedDate);
     } catch (error) {
       showStatus(error.message, "error");
       return;
     }
-    if (fields.every(({ id }) => !draft[id])) {
+    if (!hasContent(draft)) {
       showStatus("Tambahkan detail kegiatan, pembelajaran, atau kendala agar draf bisa disusun.", "error");
       return;
     }
@@ -238,7 +273,7 @@ noteForm.addEventListener("submit", (event) => {
     setMode("draft");
     const short = shortField(draft);
     showStatus(short
-      ? "Draf disusun. Lengkapi kolom yang belum mencapai 100 karakter."
+      ? "Draf disusun. Lengkapi kolom yang belum mencapai " + MIN_LENGTH + " karakter."
       : "Draf siap ditinjau. Klik Isi sekarang untuk memasukkannya ke Monev.", short ? "" : "success");
   });
 });
@@ -289,9 +324,37 @@ resetDialog.addEventListener("close", () => {
   });
 });
 
+function disarmClear() {
+  clearArmed = false;
+  clearDrafts.textContent = "Hapus semua draf";
+  clearTimeout(clearTimer);
+}
+
+// Two-step confirmation: window.confirm() would dismiss the popup.
+clearDrafts.addEventListener("click", () => {
+  if (busy) return;
+  if (!clearArmed) {
+    clearArmed = true;
+    clearDrafts.textContent = "Klik lagi untuk menghapus semua";
+    showStatus("Semua draf di profil browser ini akan dihapus permanen.", "error");
+    clearTimer = setTimeout(disarmClear, 5000);
+    return;
+  }
+  disarmClear();
+  withControlsLocked(async () => {
+    const stored = await chrome.storage.local.get(null);
+    const keys = Object.keys(stored).filter(isDraftKey);
+    await chrome.storage.local.remove(keys);
+    await openDate(savedDate);
+    showStatus(keys.length === 0
+      ? "Belum ada draf yang tersimpan."
+      : keys.length + " draf dihapus dari profil ini.", "success");
+  });
+});
+
 byId("save").addEventListener("click", () => withControlsLocked(async () => {
   const draft = readFields();
-  if (autoFill.checked && fields.some(({ id }) => draft[id].trim()) && shortField(draft)) {
+  if (autoFill.checked && hasContent(draft) && shortField(draft)) {
     showStatus("Pengisian otomatis siap setelah tiga kolom mencapai " + MIN_LENGTH + " karakter.", "error");
     return;
   }
@@ -318,8 +381,17 @@ draftForm.addEventListener("submit", (event) => {
   });
 });
 
+function syncFieldLabels() {
+  // Titles come from MonevReport.fields so the popup and the Monev matcher never drift apart.
+  for (const { id, label } of fields) {
+    const element = document.querySelector('label[for="' + id + '"]');
+    if (element) element.textContent = label;
+  }
+}
+
 async function initialize() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  syncFieldLabels();
+  const tab = await getActiveTab();
   dateInput.value = dateFromUrl(tab?.url) || todayInJakarta();
   await openDate(dateInput.value);
   workspace.hidden = false;
