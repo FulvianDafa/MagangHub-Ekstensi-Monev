@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "Draf Monev MagangHub",
   "version": "1.2.0",
+  "minimum_chrome_version": "103",
   "description": "Susun laporan dari catatan singkat dan isi tiga kolom Monev secara otomatis.",
   "permissions": ["activeTab", "storage"],
   "host_permissions": ["https://generativelanguage.googleapis.com/*"],
