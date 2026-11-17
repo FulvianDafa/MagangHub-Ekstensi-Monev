@@ -1,0 +1,10 @@
+{
+  "name": "draf-monev-maganghub",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Ekstensi Brave dan Chrome untuk menyusun draf laporan harian Monev MagangHub.",
+  "scripts": {
+    "check": "node --check src/lib/monev-report.js && node --check src/lib/gemini.js && node --check src/popup/popup.js && node --check src/content/auto-fill.js",
+    "test": "node --test"
+  }
+}
