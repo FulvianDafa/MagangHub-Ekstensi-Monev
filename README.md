@@ -12,7 +12,7 @@ Jika versi sebelumnya sudah terpasang, salin isi folder baru ke folder lama yang
 
 ## Pakai
 
-1. Di Monev, buka **Riwayat → pilih tanggal → Tambah laporan**. Buka ekstensi. Tanggal mengikuti formulir yang kamu buka dan bisa dipilih sendiri jika kamu menyiapkan draf lebih dulu.
+1. Di Monev, buka **Beranda → Isi Laporan Hari ini**. Buka ekstensi. Tanggal mengikuti formulir yang kamu buka dan bisa dipilih sendiri jika kamu menyiapkan draf lebih dulu.
 2. Tulis ringkasan kegiatan, pembelajaran, dan kendala. Contoh: **Saya ikut pengenalan tim QA, belajar alur pencatatan bug, dan sempat menunggu akses Jira.** Pilih **Tidak ada kendala** jika itu sesuai dengan kegiatanmu.
 3. Klik **Buat draf dengan Gemini** dan tinjau tiga kolom yang dihasilkan. Lengkapi informasi yang kurang sampai setiap kolom mencapai 100 karakter. Klik **Isi sekarang** untuk menyalin ketiganya ke formulir Monev. Jika sudah ada teks yang berbeda, ekstensi meminta izin untuk menggantinya.
 4. Jika menyiapkan laporan terlebih dahulu, centang **Isi otomatis saat formulir dibuka** lalu klik **Simpan draf**. Ekstensi akan mengisi formulir pada tanggal tersebut saat halaman dibuka dan ketiga kolom siap.
